@@ -616,7 +616,7 @@ module.exports = async (
       `@reach/router/lib/history`,
       `@reach/router`,
       `common-tags`,
-      /^core-js\//,
+      // /^core-js\//,
       `crypto`,
       `debug`,
       `fs`,
