@@ -2,16 +2,6 @@
 import { documentToReactComponents } from "@contentful/rich-text-react-renderer"
 import resolveResponse from "contentful-resolve-response"
 
-const _ = require(`lodash`)
-
-// Copied for now as normalize.js has node dependencies. Will move it to a separate file later.
-const fixId = id => {
-  if (!_.isString(id)) {
-    id = id.toString()
-  }
-  return `c${id}`
-}
-
 function renderRichText({ raw, references }, options = {}) {
   const richText = JSON.parse(raw)
 
@@ -19,6 +9,23 @@ function renderRichText({ raw, references }, options = {}) {
   if (!references) {
     return documentToReactComponents(richText, options)
   }
+
+  // We need the original id from contentful as id attribute
+  // This code can be simplified as soon we properly replicate
+  // Contentful's sys object
+  const traverse = obj => {
+    for (let k in obj) {
+      const value = obj[k]
+      if (value && value.sys && value.sys.type === `Link`) {
+        value.id = value.contentful_id
+        delete value.contentful_id
+      } else if (value && typeof value === `object`) {
+        traverse(value)
+      }
+    }
+  }
+
+  traverse(richText)
 
   // Create dummy response so we can use official libraries for resolving the entries
   const dummyResponse = {
@@ -34,7 +41,7 @@ function renderRichText({ raw, references }, options = {}) {
         .map(reference => {
           return {
             ...reference,
-            sys: { type: `Entry`, id: fixId(reference.contentful_id) },
+            sys: { type: `Entry`, id: reference.contentful_id },
           }
         }),
       Asset: references
@@ -42,7 +49,7 @@ function renderRichText({ raw, references }, options = {}) {
         .map(reference => {
           return {
             ...reference,
-            sys: { type: `Asset`, id: fixId(reference.contentful_id) },
+            sys: { type: `Asset`, id: reference.contentful_id },
           }
         }),
     },
